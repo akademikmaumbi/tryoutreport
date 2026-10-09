@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Laporan Multi-Tryout - MAU MBI Amanatul Ummah</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- SheetJS for parsing Excel files -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        /* Custom Scrollbar Styles */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Print Media Styles */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            body {
+                background: white !important;
+            }
+            #student-modal {
+                position: static !important;
+                background: transparent !important;
+                padding: 0 !important;
+            }
+            .modal-container {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col justify-between">
+
+    <!-- Header App -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <!-- Smart Analytics Logo -->
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+                            <path d="M12 12L2.1 12a10 10 0 0 1 17-7.9"></path>
+                            <path d="M20 12h-8V4"></path>
+                            <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-extrabold text-slate-900 leading-tight">
+                            LAPORAN TRYOUT MAU MBI
+                        </h1>
+                        <p class="text-xs text-slate-500 font-medium">MAU MBI Amanatul Ummah Surabaya • Akumulasi & Evaluasi Perkembangan Siswa</p>
+                    </div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="flex items-center flex-wrap gap-2.5">
+                    <button onclick="openManageTryoutsModal()" class="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                        <span>Kelola Tryout (<span id="tryout-count-badge">0</span>)</span>
+                    </button>
+
+                    <button onclick="openUploadModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm transition">
+                        <i data-lucide="file-plus" class="w-4 h-4"></i>
+                        <span>+ Tambah Excel Tryout</span>
+                    </button>
+
+                    <button onclick="clearAllDatabase()" title="Hapus Seluruh Database Data" class="inline-flex items-center gap-1.5 px-3 py-2 text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-semibold transition">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        <span>Hapus Database Data</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full space-y-6">
+
+        <!-- Stat Overview Cards & Batch Chart -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
+            <!-- Overall Class Batch Trend Chart -->
+            <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-brand-600"></i>
+                            Tren Rata-Rata Angkatan (Multi-Tryout)
+                        </h2>
+                        <p class="text-xs text-slate-500">Progres pertumbuhan rata-rata total nilai seluruh siswa</p>
+                    </div>
+                    <span id="batch-growth-badge" class="px-2.5 py-1 text-xs font-bold rounded-md bg-slate-100 text-slate-600">
+                        Belum Ada Data
+                    </span>
+                </div>
+                <div class="relative h-48 w-full">
+                    <canvas id="batchTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Stats Overview Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">Total Siswa Terdaftar</p>
+                        <h3 id="stat-total-students" class="text-xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <i data-lucide="award" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">Rata-Rata TO Terbaru</p>
+                        <h3 id="stat-latest-avg" class="text-xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">Siswa Tren Meningkat</p>
+                        <h3 id="stat-improving-count" class="text-xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filter and Search Controls -->
+        <section class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
+            <div class="flex flex-col lg:flex-row gap-4 justify-between items-center">
+                <div class="relative w-full lg:w-80">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="search-input" oninput="applyFilters()" placeholder="Cari Nama / No Peserta..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                </div>
+
+                <div class="flex flex-wrap lg:flex-nowrap gap-3 w-full lg:w-auto">
+                    <!-- Filter Kelas -->
+                    <select id="filter-kelas" onchange="applyFilters()" class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="ALL">Semua Kelas</option>
+                    </select>
+
+                    <select id="filter-trend" onchange="applyFilters()" class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="ALL">Semua Tren Progres</option>
+                        <option value="UP">↗ Tren Meningkat</option>
+                        <option value="STABLE">→ Tren Stabil (±2 pt)</option>
+                        <option value="DOWN">↘ Tren Menurun</option>
+                    </select>
+
+                    <select id="filter-tier" onchange="applyFilters()" class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="ALL">Semua Kategori Performance</option>
+                        <option value="Kelompok Tinggi">Kelompok Tinggi (30% Atas)</option>
+                        <option value="Kelompok Menengah">Kelompok Menengah (40% Tengah)</option>
+                        <option value="Kelompok Bawah">Kelompok Bawah (30% Bawah)</option>
+                    </select>
+
+                    <select id="sort-order" onchange="applyFilters()" class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="rank-asc">Peringkat TO Terbaru (1 - Atas)</option>
+                        <option value="delta-desc">Peningkatan Terbesar (Delta +)</option>
+                        <option value="name-asc">Nama Siswa (A - Z)</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Scrollable Student List Container -->
+        <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden no-print">
+            <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                <div>
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                        <i data-lucide="users" class="w-4 h-4 text-brand-600"></i>
+                        Daftar Nama Siswa &amp; Rekapitulasi Progres
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Klik pada baris nama siswa untuk melihat Laporan Rapor Analisis Perkembangan &amp; Grafik Lengkap.</p>
+                </div>
+                <span id="showing-count" class="text-xs font-semibold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-md border border-brand-100">
+                    Menampilkan 0 siswa
+                </span>
+            </div>
+
+            <!-- Scrollable Student Roster Container -->
+            <div class="max-h-[520px] overflow-y-auto custom-scrollbar divide-y divide-slate-100" id="student-list-container">
+                <!-- Rows injected via JS -->
+            </div>
+
+            <div id="empty-state" class="hidden text-center py-12 bg-white">
+                <i data-lucide="database-backup" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
+                <p class="text-slate-600 font-medium">Database data kosong</p>
+                <p class="text-xs text-slate-400 mt-1">Silakan klik tombol <b>"+ Tambah Excel Tryout"</b> di atas untuk mengunggah data siswa.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: Upload Excel Tryout Baru -->
+    <div id="upload-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-slate-100">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="upload-cloud" class="w-5 h-5 text-brand-600"></i>
+                    Upload File Excel Tryout Baru
+                </h3>
+                <button onclick="closeUploadModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <form onsubmit="handleFileUpload(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nama / Seri Tryout</label>
+                    <input type="text" id="upload-to-name" required placeholder="Contoh: Tryout 1 - Agustus 2026" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Pilih File Excel (.xlsx / .xls)</label>
+                    <input type="file" id="upload-to-file" accept=".xlsx, .xls" required class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
+                    <p class="text-[11px] text-slate-400 mt-1.5">Mendukung format standar & DMR Export (NO, KELAS, NO PESERTA, NAMA, BNR, NIL).</p>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" onclick="closeUploadModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Batal</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-sm">Proses & Akumulasikan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Kelola Daftar Tryout -->
+    <div id="manage-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 border border-slate-100">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="layers" class="w-5 h-5 text-brand-600"></i>
+                    Daftar Seri Tryout Terdaftar
+                </h3>
+                <button onclick="closeManageModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div id="tryout-list-container" class="space-y-2.5 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                <!-- Injected via JS -->
+            </div>
+
+            <div class="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+                <button onclick="closeManageModal()" class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Detail Laporan Akumulasi & Progress Siswa -->
+    <div id="student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex justify-center items-center p-2 sm:p-4 overflow-y-auto">
+        <div class="modal-container bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col my-auto border border-slate-100 overflow-hidden relative">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-start justify-between relative no-print">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div class="w-12 h-12 bg-brand-600 text-white rounded-xl font-bold flex items-center justify-center text-lg shadow-md" id="modal-avatar">
+                        AA
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 class="text-xl font-bold text-slate-900" id="modal-name">Nama Siswa</h2>
+                            <span id="modal-tier-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold border">
+                                Kelompok -
+                            </span>
+                            <span id="modal-trend-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                ↗ Meningkat
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5" id="modal-subtext">No. Peserta: -</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="printStudentReport()" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        <span>Cetak Laporan</span>
+                    </button>
+                    <button onclick="closeModal()" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-lg transition">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Navigation Header -->
+            <div class="px-6 border-b border-slate-200 bg-white flex gap-6 no-print">
+                <button onclick="switchTab('accumulation')" id="tab-btn-accumulation" class="py-3 text-xs font-bold border-b-2 border-brand-600 text-brand-600 flex items-center gap-1.5">
+                    <i data-lucide="line-chart" class="w-4 h-4"></i>
+                    Rapor Akumulasi &amp; Progres Multi-TO
+                </button>
+                <button onclick="switchTab('single')" id="tab-btn-single" class="py-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center gap-1.5">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    Detail Hasil Per Tryout
+                </button>
+            </div>
+
+            <!-- Modal Content Body -->
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-grow space-y-6" id="modal-printable-content">
+                
+                <!-- Printable Header (Visible only when printing) -->
+                <div class="hidden print-only mb-6 pb-4 border-b border-slate-300">
+                    <div class="flex items-center gap-4 mb-3">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+                                <path d="M12 12L2.1 12a10 10 0 0 1 17-7.9"></path>
+                                <path d="M20 12h-8V4"></path>
+                                <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-slate-900">LAPORAN EVALUASI &amp; AKUMULASI PERKEMBANGAN BELAJAR</h1>
+                            <p class="text-xs text-slate-600 uppercase">MAU MBI AMANATUL UMMAH SURABAYA • SAINTEK 2026</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
+                        <p><strong>Nama Peserta:</strong> <span id="print-name">-</span></p>
+                        <p><strong>Kelas:</strong> <span id="print-class">-</span></p>
+                        <p><strong>No. Peserta:</strong> <span id="print-id">-</span></p>
+                        <p><strong>Kelompok Performa:</strong> <span id="print-tier">-</span></p>
+                        <p><strong>Status Progres:</strong> <span id="print-trend">-</span></p>
+                        <p><strong>Total Tryout Diikuti:</strong> <span id="print-to-count">-</span></p>
+                    </div>
+                </div>
+
+                <!-- TAB 1: Rapor Akumulasi & Progres Multi-TO -->
+                <div id="tab-accumulation-content" class="space-y-6">
+                    <!-- Key Statistics Cards -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div>
+                            <span class="text-[11px] text-slate-500 block">Rata-Rata Akumulasi</span>
+                            <span class="text-lg font-bold text-brand-700" id="acc-overall-avg">0</span>
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-500 block">Nilai Tertinggi (TO)</span>
+                            <span class="text-lg font-bold text-slate-900" id="acc-highest-score">0</span>
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-500 block">Peringkat Terkini</span>
+                            <span class="text-base font-bold text-slate-800" id="acc-latest-rank">-</span>
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-500 block">Perubahan (Delta Terbaru)</span>
+                            <span class="text-base font-bold" id="acc-delta-score">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Individual Trend Chart -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Grafik Tren Progres Rata-Rata (TO ke TO)</h3>
+                        <div class="relative h-52 w-full">
+                            <canvas id="studentTrendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Longitudinal Subject Performance Matrix -->
+                    <div class="p-4 bg-white rounded-xl border border-slate-200">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Matriks Perubahan Nilai Subtes</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                        <th class="p-2 font-semibold">Subtes</th>
+                                        <th class="p-2 font-semibold text-center">TO Awal</th>
+                                        <th class="p-2 font-semibold text-center">TO Terbaru</th>
+                                        <th class="p-2 font-semibold text-center">Rata-Rata Akumulasi</th>
+                                        <th class="p-2 font-semibold text-center">Pertumbuhan (&Delta;)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="matrix-table-body" class="divide-y divide-slate-100">
+                                    <!-- Injected via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Automated Longitudinal Insights (Top 3 & Bottom 3 Subjects) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-emerald-50/70 rounded-xl border border-emerald-100">
+                            <div class="flex items-center gap-2 mb-2 text-emerald-800 font-semibold text-sm">
+                                <i data-lucide="award" class="w-4 h-4"></i>
+                                <h4>Area Nilai Tertinggi</h4>
+                            </div>
+                            <ul id="acc-strengths" class="text-xs text-slate-700 space-y-1.5 list-disc list-inside">
+                                <!-- Injected -->
+                            </ul>
+                        </div>
+
+                        <div class="p-4 bg-rose-50/70 rounded-xl border border-rose-100">
+                            <div class="flex items-center gap-2 mb-2 text-rose-800 font-semibold text-sm">
+                                <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                <h4>Subtes Membutuhkan Perhatian Tambahan</h4>
+                            </div>
+                            <ul id="acc-weaknesses" class="text-xs text-slate-700 space-y-1.5 list-disc list-inside">
+                                <!-- Injected -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Analisis Kenaikan dan Penurunan Akumulasi Nilai Tryout Per Mapel -->
+                    <div class="p-4 bg-amber-50/70 rounded-xl border border-amber-200">
+                        <div class="flex items-center gap-2 mb-2 text-amber-900 font-semibold text-sm">
+                            <i data-lucide="arrow-up-down" class="w-4 h-4 text-amber-700"></i>
+                            <h4>Analisis Tren Perkembangan Nilai Per Subtes (Akumulasi)</h4>
+                        </div>
+                        <div id="acc-subject-deltas" class="text-xs text-slate-700 space-y-2">
+                            <!-- Injected -->
+                        </div>
+                    </div>
+
+                    <!-- Analisis Peminatan Jurusan Perkuliahan (Evaluasi Berdasarkan Semua Mapel) -->
+                    <div class="p-4 bg-indigo-50/70 rounded-xl border border-indigo-200">
+                        <div class="flex items-center gap-2 mb-2 text-indigo-900 font-semibold text-sm">
+                            <i data-lucide="graduation-cap" class="w-4 h-4 text-indigo-700"></i>
+                            <h4>Analisis Peminatan Jurusan Perkuliahan</h4>
+                        </div>
+                        <div id="acc-major-recommendation" class="text-xs text-slate-700 space-y-2">
+                            <!-- Injected -->
+                        </div>
+                    </div>
+
+                    <!-- Strategy Recommendations & Performance Group Analysis -->
+                    <div class="p-4 bg-blue-50/70 rounded-xl border border-blue-100">
+                        <div class="flex items-center gap-2 mb-2 text-blue-800 font-semibold text-sm">
+                            <i data-lucide="compass" class="w-4 h-4"></i>
+                            <h4>Analisis Performance &amp; Rekomendasi Strategi Belajar Adaptif</h4>
+                        </div>
+                        <div id="acc-recommendation" class="text-xs text-slate-700 space-y-2">
+                            <!-- Injected -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: Detail Hasil Per Tryout -->
+                <div id="tab-single-content" class="hidden space-y-6">
+                    <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <label class="text-xs font-bold text-slate-700">Pilih Seri Tryout:</label>
+                        <select id="single-to-selector" onchange="renderSingleTryoutView()" class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <!-- Injected -->
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200">
+                            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Profil Kemampuan Subtes (Vs Rata-rata Kelas)</h3>
+                            <div class="relative h-60 w-full flex items-center justify-center">
+                                <canvas id="singleRadarChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Rincian Per Subtes</h3>
+                            <div id="single-subject-breakdown" class="space-y-2 text-xs">
+                                <!-- Progress bars injected -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 no-print">
+        <p>&copy; 2026 MAU MBI Amanatul Ummah Surabaya &bull; Multi-Tryout Academic Progress Tracking System</p>
+    </footer>
+
+    <script>
+        // Global State
+        let tryoutDataSeries = JSON.parse(localStorage.getItem('mbi_tryout_data')) || [];
+        let selectedStudentId = null;
+        let batchChartInstance = null;
+        let studentTrendChartInstance = null;
+        let singleRadarChartInstance = null;
+
+        const subjectKeys = [
+            { key: 'ina', name: 'B. Indonesia' },
+            { key: 'eng', name: 'B. Inggris' },
+            { key: 'mat', name: 'Matematika' },
+            { key: 'matlan', name: 'Matematika Lanjut' },
+            { key: 'fis', name: 'Fisika' },
+            { key: 'bio', name: 'Biologi' },
+            { key: 'kim', name: 'Kimia' }
+        ];
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            saveStateToStorage();
+            initLucide();
+            populateClassFilterOptions();
+            renderBatchTrendChart();
+            updateOverviewStats();
+            applyFilters();
+            updateTryoutBadge();
+        });
+
+        function saveStateToStorage() {
+            localStorage.setItem('mbi_tryout_data', JSON.stringify(tryoutDataSeries));
+        }
+
+        function initLucide() {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        function updateTryoutBadge() {
+            document.getElementById('tryout-count-badge').innerText = tryoutDataSeries.length;
+        }
+
+        function clearAllDatabase() {
+            if (confirm('Apakah Anda yakin ingin MENGHAPUS SELURUH DATABASE DATA?\n\nSemua data tryout dan daftar siswa akan dihapus secara permanen.')) {
+                tryoutDataSeries = [];
+                localStorage.removeItem('mbi_tryout_data');
+                saveStateToStorage();
+                updateTryoutBadge();
+                populateClassFilterOptions();
+                renderBatchTrendChart();
+                updateOverviewStats();
+                applyFilters();
+                alert('Database berhasil dikosongkan.');
+            }
+        }
+
+        function populateClassFilterOptions() {
+            const classSelect = document.getElementById('filter-kelas');
+            const currentSelected = classSelect.value;
+
+            const classSet = new Set();
+            tryoutDataSeries.forEach(to => {
+                to.students.forEach(s => {
+                    if (s.kelas) classSet.add(s.kelas);
+                });
+            });
+
+            const sortedClasses = Array.from(classSet).sort();
+
+            classSelect.innerHTML = `<option value="ALL">Semua Kelas</option>` + 
+                sortedClasses.map(c => `<option value="${c}">Kelas ${c}</option>`).join('');
+
+            if (sortedClasses.includes(currentSelected)) {
+                classSelect.value = currentSelected;
+            } else {
+                classSelect.value = 'ALL';
+            }
+        }
+
+        function getAggregatedStudentList() {
+            const studentMap = new Map();
+
+            tryoutDataSeries.forEach((to, toIdx) => {
+                to.students.forEach(s => {
+                    const idKey = s.id || s.name;
+                    if (!studentMap.has(idKey)) {
+                        studentMap.set(idKey, {
+                            id: s.id,
+                            name: s.name,
+                            kelas: s.kelas || '-',
+                            history: []
+                        });
+                    }
+                    if (s.kelas) studentMap.get(idKey).kelas = s.kelas;
+
+                    studentMap.get(idKey).history.push({
+                        toId: to.id,
+                        toTitle: to.title,
+                        toIndex: toIdx,
+                        data: s
+                    });
+                });
+            });
+
+            const aggregatedList = [];
+
+            studentMap.forEach((student, idKey) => {
+                student.history.sort((a, b) => a.toIndex - b.toIndex);
+                
+                const latestTo = student.history[student.history.length - 1].data;
+                const firstTo = student.history[0].data;
+                const totalAvgAcc = student.history.reduce((acc, curr) => acc + curr.data.avg, 0) / student.history.length;
+                
+                let delta = 0;
+                let trendDirection = 'STABLE';
+
+                if (student.history.length > 1) {
+                    const prevTo = student.history[student.history.length - 2].data;
+                    delta = latestTo.avg - prevTo.avg;
+                    if (delta > 2) trendDirection = 'UP';
+                    else if (delta < -2) trendDirection = 'DOWN';
+                    else trendDirection = 'STABLE';
+                }
+
+                aggregatedList.push({
+                    id: student.id,
+                    name: student.name,
+                    kelas: student.kelas,
+                    history: student.history,
+                    latest: latestTo,
+                    first: firstTo,
+                    overallAvg: totalAvgAcc,
+                    delta: delta,
+                    trendDirection: trendDirection,
+                    tier: 'Kelompok Menengah'
+                });
+            });
+
+            if (aggregatedList.length > 0) {
+                const sortedByScore = [...aggregatedList].sort((a, b) => b.latest.avg - a.latest.avg);
+                const totalCount = sortedByScore.length;
+
+                const topCutoff = Math.ceil(totalCount * 0.30);
+                const midCutoff = Math.ceil(totalCount * 0.70);
+
+                sortedByScore.forEach((item, index) => {
+                    let assignedTier = 'Kelompok Menengah';
+                    if (index < topCutoff) {
+                        assignedTier = 'Kelompok Tinggi';
+                    } else if (index < midCutoff) {
+                        assignedTier = 'Kelompok Menengah';
+                    } else {
+                        assignedTier = 'Kelompok Bawah';
+                    }
+                    
+                    const target = aggregatedList.find(s => (s.id || s.name) === (item.id || item.name));
+                    if (target) target.tier = assignedTier;
+                });
+            }
+
+            return aggregatedList;
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const selectedClass = document.getElementById('filter-kelas').value;
+            const trend = document.getElementById('filter-trend').value;
+            const tier = document.getElementById('filter-tier').value;
+            const sort = document.getElementById('sort-order').value;
+
+            const allStudents = getAggregatedStudentList();
+
+            const filtered = allStudents.filter(s => {
+                const matchesSearch = (s.name && s.name.toLowerCase().includes(search)) || 
+                                     (s.id && s.id.toString().toLowerCase().includes(search));
+                const matchesClass = selectedClass === 'ALL' || String(s.kelas) === String(selectedClass);
+                const matchesTrend = trend === 'ALL' || s.trendDirection === trend;
+                const matchesTier = tier === 'ALL' || s.tier === tier;
+                return matchesSearch && matchesClass && matchesTrend && matchesTier;
+            });
+
+            filtered.sort((a, b) => {
+                if (sort === 'rank-asc') return (a.latest.rank || 9999) - (b.latest.rank || 9999);
+                if (sort === 'delta-desc') return b.delta - a.delta;
+                if (sort === 'name-asc') return a.name.localeCompare(b.name);
+                return 0;
+            });
+
+            renderStudentList(filtered);
+        }
+
+        function renderStudentList(students) {
+            const container = document.getElementById('student-list-container');
+            const emptyState = document.getElementById('empty-state');
+            document.getElementById('showing-count').innerText = `Menampilkan ${students.length} siswa`;
+
+            if (students.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            container.innerHTML = students.map(s => {
+                let trendBadge = '';
+                if (s.trendDirection === 'UP') {
+                    trendBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">↗ +${s.delta.toFixed(1)}</span>`;
+                } else if (s.trendDirection === 'DOWN') {
+                    trendBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">↘ ${s.delta.toFixed(1)}</span>`;
+                } else {
+                    trendBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">→ Stabil</span>`;
+                }
+
+                let tierBadgeClass = "bg-blue-50 text-blue-700 border-blue-200";
+                if (s.tier === 'Kelompok Tinggi') {
+                    tierBadgeClass = "bg-purple-50 text-purple-700 border-purple-200";
+                } else if (s.tier === 'Kelompok Bawah') {
+                    tierBadgeClass = "bg-amber-50 text-amber-800 border-amber-200";
+                }
+
+                return `
+                    <div onclick="openStudentModal('${s.id || s.name}')" class="p-3.5 hover:bg-slate-50 transition cursor-pointer flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 bg-brand-100 text-brand-700 font-bold rounded-lg flex items-center justify-center text-xs">
+                                ${s.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h4 class="text-sm font-bold text-slate-900">${s.name}</h4>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${tierBadgeClass}">${s.tier}</span>
+                                    ${trendBadge}
+                                </div>
+                                <p class="text-xs text-slate-500">Kelas: <span class="font-semibold text-slate-700">${s.kelas}</span> • No. Peserta: ${s.id || '-'} • TO Diikuti: ${s.history.length}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-extrabold text-brand-700">${s.latest.avg.toFixed(1)}</div>
+                            <div class="text-[11px] text-slate-500">Rank #${s.latest.rank || '-'}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateOverviewStats() {
+            const students = getAggregatedStudentList();
+            document.getElementById('stat-total-students').innerText = students.length;
+
+            if (students.length === 0) {
+                document.getElementById('stat-latest-avg').innerText = '0';
+                document.getElementById('stat-improving-count').innerText = '0';
+                return;
+            }
+
+            const latestAvgSum = students.reduce((acc, s) => acc + s.latest.avg, 0);
+            const overallBatchAvg = latestAvgSum / students.length;
+            document.getElementById('stat-latest-avg').innerText = overallBatchAvg.toFixed(1);
+
+            const improvingCount = students.filter(s => s.trendDirection === 'UP').length;
+            document.getElementById('stat-improving-count').innerText = `${improvingCount} (${((improvingCount / students.length) * 100).toFixed(0)}%)`;
+        }
+
+        function renderBatchTrendChart() {
+            const ctx = document.getElementById('batchTrendChart').getContext('2d');
+            if (batchChartInstance) batchChartInstance.destroy();
+
+            if (tryoutDataSeries.length === 0) {
+                document.getElementById('batch-growth-badge').innerText = 'Belum Ada Data';
+                return;
+            }
+
+            const labels = tryoutDataSeries.map(to => to.title);
+            const batchAverages = tryoutDataSeries.map(to => {
+                const totalAvg = to.students.reduce((acc, s) => acc + s.avg, 0);
+                return to.students.length > 0 ? (totalAvg / to.students.length).toFixed(1) : 0;
+            });
+
+            if (batchAverages.length > 1) {
+                const first = parseFloat(batchAverages[0]);
+                const last = parseFloat(batchAverages[batchAverages.length - 1]);
+                const diff = (last - first).toFixed(1);
+                const badgeEl = document.getElementById('batch-growth-badge');
+                badgeEl.innerText = diff >= 0 ? `Pertumbuhan: +${diff} pt` : `Penurunan: ${diff} pt`;
+                badgeEl.className = diff >= 0 
+                    ? 'px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-100 text-emerald-800' 
+                    : 'px-2.5 py-1 text-xs font-bold rounded-md bg-rose-100 text-rose-800';
+            }
+
+            batchChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Rata-Rata Angkatan',
+                        data: batchAverages,
+                        borderColor: '#0284c7',
+                        backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#0284c7'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: false, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function openStudentModal(studentId) {
+            selectedStudentId = studentId;
+            const students = getAggregatedStudentList();
+            const student = students.find(s => (s.id || s.name) === studentId);
+
+            if (!student) return;
+
+            document.getElementById('modal-name').innerText = student.name;
+            document.getElementById('modal-subtext').innerText = `Kelas: ${student.kelas} • No. Peserta: ${student.id || '-'} • Peminatan: SAINTEK`;
+            document.getElementById('modal-avatar').innerText = student.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+            document.getElementById('print-name').innerText = student.name;
+            document.getElementById('print-class').innerText = student.kelas;
+            document.getElementById('print-id').innerText = student.id || '-';
+            document.getElementById('print-tier').innerText = student.tier;
+            document.getElementById('print-trend').innerText = student.trendDirection;
+            document.getElementById('print-to-count').innerText = student.history.length;
+
+            const tierBadge = document.getElementById('modal-tier-badge');
+            tierBadge.innerText = student.tier;
+            if (student.tier === 'Kelompok Tinggi') {
+                tierBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200";
+            } else if (student.tier === 'Kelompok Bawah') {
+                tierBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200";
+            } else {
+                tierBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200";
+            }
+
+            const trendBadge = document.getElementById('modal-trend-badge');
+            if (student.trendDirection === 'UP') {
+                trendBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200";
+                trendBadge.innerText = `↗ Meningkat (+${student.delta.toFixed(1)})`;
+            } else if (student.trendDirection === 'DOWN') {
+                trendBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200";
+                trendBadge.innerText = `↘ Menurun (${student.delta.toFixed(1)})`;
+            } else {
+                trendBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200";
+                trendBadge.innerText = `→ Stabil`;
+            }
+
+            document.getElementById('acc-overall-avg').innerText = student.overallAvg.toFixed(1);
+            const highestScore = Math.max(...student.history.map(h => h.data.avg));
+            document.getElementById('acc-highest-score').innerText = highestScore.toFixed(1);
+            document.getElementById('acc-latest-rank').innerText = `#${student.latest.rank || '-'}`;
+            
+            const deltaEl = document.getElementById('acc-delta-score');
+            deltaEl.innerText = student.delta >= 0 ? `+${student.delta.toFixed(1)}` : student.delta.toFixed(1);
+            deltaEl.className = student.delta >= 0 ? "text-base font-bold text-emerald-600" : "text-base font-bold text-rose-600";
+
+            renderStudentTrendChart(student.history);
+            renderSubjectMatrixTable(student);
+            generateAutomatedInsights(student);
+            populateSingleToSelector(student.history);
+
+            switchTab('accumulation');
+            document.getElementById('student-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('student-modal').classList.add('hidden');
+        }
+
+        function renderStudentTrendChart(history) {
+            const ctx = document.getElementById('studentTrendChart').getContext('2d');
+            if (studentTrendChartInstance) studentTrendChartInstance.destroy();
+
+            const labels = history.map(h => h.toTitle);
+            const scores = history.map(h => h.data.avg);
+
+            studentTrendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Nilai Rata-Rata TO',
+                        data: scores,
+                        borderColor: '#0284c7',
+                        backgroundColor: 'rgba(2, 132, 199, 0.15)',
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#0369a1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 0, max: 100, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderSubjectMatrixTable(student) {
+            const tbody = document.getElementById('matrix-table-body');
+            const firstTo = student.first;
+            const latestTo = student.latest;
+
+            tbody.innerHTML = subjectKeys.map(subj => {
+                const valFirst = firstTo.scores[subj.key] || 0;
+                const valLatest = latestTo.scores[subj.key] || 0;
+                
+                const accAvg = student.history.reduce((sum, h) => sum + (h.data.scores[subj.key] || 0), 0) / student.history.length;
+                const growth = valLatest - valFirst;
+
+                let growthText = `<span class="text-slate-500">0.0</span>`;
+                if (growth > 0) growthText = `<span class="text-emerald-600 font-bold">▲ +${growth.toFixed(1)}</span>`;
+                else if (growth < 0) growthText = `<span class="text-rose-600 font-bold">▼ ${growth.toFixed(1)}</span>`;
+
+                return `
+                    <tr>
+                        <td class="p-2 font-medium text-slate-800">${subj.name}</td>
+                        <td class="p-2 text-center text-slate-600">${valFirst.toFixed(1)}</td>
+                        <td class="p-2 text-center text-slate-900 font-bold">${valLatest.toFixed(1)}</td>
+                        <td class="p-2 text-center text-brand-700 font-semibold">${accAvg.toFixed(1)}</td>
+                        <td class="p-2 text-center">${growthText}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Rekomendasi Jurusan Berdasarkan SEMUA Mata Pelajaran
+        function recommendMajorsByAllSubjects(allSubjectsMap) {
+            const bio = allSubjectsMap['bio'] || 0;
+            const kim = allSubjectsMap['kim'] || 0;
+            const fis = allSubjectsMap['fis'] || 0;
+            const mat = allSubjectsMap['mat'] || 0;
+            const matlan = allSubjectsMap['matlan'] || 0;
+            const eng = allSubjectsMap['eng'] || 0;
+            const ina = allSubjectsMap['ina'] || 0;
+
+            const mathAvg = (mat + matlan) / 2;
+
+            const jurusanScores = [
+                {
+                    name: 'Kedokteran / Pendidikan Dokter',
+                    score: (bio * 0.35) + (kim * 0.30) + (eng * 0.15) + (ina * 0.10) + (mathAvg * 0.10)
+                },
+                {
+                    name: 'Farmasi & Biomedis',
+                    score: (kim * 0.35) + (bio * 0.30) + (mathAvg * 0.15) + (eng * 0.10) + (ina * 0.10)
+                },
+                {
+                    name: 'Teknik Informatika / Computer Science',
+                    score: (mathAvg * 0.35) + (eng * 0.25) + (fis * 0.20) + (ina * 0.10) + (kim * 0.05) + (bio * 0.05)
+                },
+                {
+                    name: 'Teknik Sipil / Elektro / Mesin',
+                    score: (fis * 0.35) + (mathAvg * 0.30) + (kim * 0.15) + (eng * 0.10) + (ina * 0.10)
+                },
+                {
+                    name: 'Teknik Kimia / Material',
+                    score: (kim * 0.35) + (mathAvg * 0.25) + (fis * 0.20) + (eng * 0.10) + (ina * 0.10)
+                },
+                {
+                    name: 'Sistem Informasi & Data Science',
+                    score: (mathAvg * 0.30) + (eng * 0.25) + (ina * 0.15) + (fis * 0.10) + (kim * 0.10) + (bio * 0.10)
+                },
+                {
+                    name: 'Hubungan Internasional & Sastra',
+                    score: (eng * 0.40) + (ina * 0.30) + (mathAvg * 0.10) + (bio * 0.06) + (kim * 0.07) + (fis * 0.07)
+                },
+                {
+                    name: 'Teknologi Pangan & Bioteknologi',
+                    score: (bio * 0.30) + (kim * 0.30) + (mathAvg * 0.15) + (eng * 0.15) + (ina * 0.10)
+                }
+            ];
+
+            jurusanScores.sort((a, b) => b.score - a.score);
+            return jurusanScores.slice(0, 3).map(j => j.name);
+        }
+
+        function generateAutomatedInsights(student) {
+            const strengthsEl = document.getElementById('acc-strengths');
+            const weaknessesEl = document.getElementById('acc-weaknesses');
+            const subjectDeltasEl = document.getElementById('acc-subject-deltas');
+            const majorEl = document.getElementById('acc-major-recommendation');
+            const recommendationEl = document.getElementById('acc-recommendation');
+
+            const allSubjectsMap = {};
+
+            const subjectPerformance = subjectKeys.map(subj => {
+                const avg = student.history.reduce((sum, h) => sum + (h.data.scores[subj.key] || 0), 0) / student.history.length;
+                allSubjectsMap[subj.key] = avg;
+                return { key: subj.key, name: subj.name, score: avg };
+            });
+
+            subjectPerformance.sort((a, b) => b.score - a.score);
+
+            const topSubj = subjectPerformance.slice(0, 3);
+            const bottomSubj = subjectPerformance.slice(-3);
+
+            strengthsEl.innerHTML = topSubj.map(s => `<li><b>${s.name}</b> (Rata-rata: ${s.score.toFixed(1)}) - Konsisten menunjukkan penguasaan materi yang tinggi.</li>`).join('');
+            weaknessesEl.innerHTML = bottomSubj.map(s => `<li><b>${s.name}</b> (Rata-rata: ${s.score.toFixed(1)}) - Memerlukan latihan soal intensif dan pendampingan ekstra.</li>`).join('');
+
+            const firstTo = student.first;
+            const latestTo = student.latest;
+
+            const subjectDeltas = subjectKeys.map(subj => {
+                const valFirst = firstTo.scores[subj.key] || 0;
+                const valLatest = latestTo.scores[subj.key] || 0;
+                const delta = valLatest - valFirst;
+                return { name: subj.name, delta: delta, valFirst: valFirst, valLatest: valLatest };
+            });
+
+            const increasedSubjects = subjectDeltas.filter(s => s.delta > 0).sort((a, b) => b.delta - a.delta);
+            const decreasedSubjects = subjectDeltas.filter(s => s.delta < 0).sort((a, b) => a.delta - b.delta);
+            const stableSubjects = subjectDeltas.filter(s => s.delta === 0);
+
+            let deltaHtml = `<ul class="list-disc list-inside space-y-1">`;
+            if (increasedSubjects.length > 0) {
+                const incList = increasedSubjects.map(s => `<b>${s.name}</b> (+${s.delta.toFixed(1)} pt)`).join(', ');
+                deltaHtml += `<li class="text-emerald-800"><b>Peningkatan Terdapat Pada:</b> Subtes ${incList}.</li>`;
+            }
+            if (decreasedSubjects.length > 0) {
+                const decList = decreasedSubjects.map(s => `<b>${s.name}</b> (${s.delta.toFixed(1)} pt)`).join(', ');
+                deltaHtml += `<li class="text-rose-800"><b>Penurunan Terdapat Pada:</b> Subtes ${decList}.</li>`;
+            }
+            if (stableSubjects.length > 0) {
+                const staList = stableSubjects.map(s => `<b>${s.name}</b>`).join(', ');
+                deltaHtml += `<li class="text-slate-700"><b>Nilai Konstan/Stabil:</b> Subtes ${staList}.</li>`;
+            }
+            deltaHtml += `</ul>`;
+            subjectDeltasEl.innerHTML = deltaHtml;
+
+            // College Major Analysis Based On ALL Subjects
+            const recommendedMajors = recommendMajorsByAllSubjects(allSubjectsMap);
+
+            majorEl.innerHTML = `
+                <p>Berdasarkan evaluasi komprehensif akumulasi seluruh mata pelajaran (7 subtes), berikut rekomendasi program studi / peminatan jurusan perkuliahan yang paling sesuai dengan profil kemampuan siswa:</p>
+                <div class="flex flex-wrap gap-2 mt-2">
+                    ${recommendedMajors.map(m => `<span class="px-2.5 py-1 bg-indigo-100 text-indigo-900 font-bold rounded-lg border border-indigo-200 text-[11px] flex items-center gap-1"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-600"></i>${m}</span>`).join('')}
+                </div>
+            `;
+            initLucide();
+
+            let tierAnalysisText = "";
+            if (student.tier === 'Kelompok Tinggi') {
+                tierAnalysisText = `<p class="mb-1 text-purple-900"><b>Analisis Kelompok Performance:</b> Siswa berada di <b>Kelompok Tinggi (30% Nilai Rata-Rata Tertinggi)</b>. Menunjukkan tingkat pemahaman konsep yang sangat matang serta daya saing akademik yang tinggi.</p>`;
+            } else if (student.tier === 'Kelompok Menengah') {
+                tierAnalysisText = `<p class="mb-1 text-blue-900"><b>Analisis Kelompok Performance:</b> Siswa berada di <b>Kelompok Menengah (40% Tengah)</b>. Memiliki fondasi belajar yang cukup baik, namun memerlukan peningkatan konsistensi dan efisiensi penyelesaian soal pada subtes tertentu.</p>`;
+            } else {
+                tierAnalysisText = `<p class="mb-1 text-amber-900"><b>Analisis Kelompok Performance:</b> Siswa berada di <b>Kelompok Bawah (30% Bawah)</b>. Memerlukan perhatian khusus dan program pemantapan konsep dasar secara terarah agar dapat bersaing lebih optimal.</p>`;
+            }
+
+            let trendStrategyText = "";
+            if (student.trendDirection === 'UP') {
+                trendStrategyText = `<p>Siswa menunjukkan <b>tren peningkatan yang sangat baik (+${student.delta.toFixed(1)} pt)</b>. Pertahankan konsistensi latihan soal berkala dan tingkatkan ketelitian pada subtes <b>${bottomSubj[0].name}</b> untuk memperkuat posisi peringkat global.</p>`;
+            } else if (student.trendDirection === 'DOWN') {
+                trendStrategyText = `<p class="text-rose-800">Siswa mengalami <b>penurunan performa (${student.delta.toFixed(1)} pt)</b> pada Tryout terbaru. Direkomendasikan melakukan sesi konseling akademik, re-evaluasi manajemen waktu saat ujian, dan remedial difokuskan pada subtes <b>${bottomSubj[0].name}</b> serta <b>${bottomSubj[1].name}</b>.</p>`;
+            } else {
+                trendStrategyText = `<p>Performa siswa cenderung <b>stasioner/stabil</b>. Untuk melompati ambang batas nilai (passing grade target), alokasikan waktu belajar lebih untuk mengejar ketertinggalan pada subtes <b>${bottomSubj[0].name}</b>.</p>`;
+            }
+
+            recommendationEl.innerHTML = tierAnalysisText + trendStrategyText;
+        }
+
+        function switchTab(tab) {
+            const btnAcc = document.getElementById('tab-btn-accumulation');
+            const btnSingle = document.getElementById('tab-btn-single');
+            const contentAcc = document.getElementById('tab-accumulation-content');
+            const contentSingle = document.getElementById('tab-single-content');
+
+            if (tab === 'accumulation') {
+                btnAcc.className = "py-3 text-xs font-bold border-b-2 border-brand-600 text-brand-600 flex items-center gap-1.5";
+                btnSingle.className = "py-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center gap-1.5";
+                contentAcc.classList.remove('hidden');
+                contentSingle.classList.add('hidden');
+            } else {
+                btnSingle.className = "py-3 text-xs font-bold border-b-2 border-brand-600 text-brand-600 flex items-center gap-1.5";
+                btnAcc.className = "py-3 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 flex items-center gap-1.5";
+                contentSingle.classList.remove('hidden');
+                contentAcc.classList.add('hidden');
+                renderSingleTryoutView();
+            }
+        }
+
+        function populateSingleToSelector(history) {
+            const selector = document.getElementById('single-to-selector');
+            selector.innerHTML = history.map(h => `<option value="${h.toId}">${h.toTitle}</option>`).join('');
+        }
+
+        function renderSingleTryoutView() {
+            const selectedToId = document.getElementById('single-to-selector').value;
+            const students = getAggregatedStudentList();
+            const student = students.find(s => (s.id || s.name) === selectedStudentId);
+
+            if (!student) return;
+
+            const historyItem = student.history.find(h => h.toId === selectedToId) || student.history[student.history.length - 1];
+            const studentScores = subjectKeys.map(k => historyItem.data.scores[k.key] || 0);
+
+            const toSeries = tryoutDataSeries.find(t => t.id === historyItem.toId);
+            const classAvgScores = subjectKeys.map(k => {
+                if (!toSeries) return 50;
+                const total = toSeries.students.reduce((sum, s) => sum + (s.scores[k.key] || 0), 0);
+                return toSeries.students.length > 0 ? total / toSeries.students.length : 50;
+            });
+
+            const ctx = document.getElementById('singleRadarChart').getContext('2d');
+            if (singleRadarChartInstance) singleRadarChartInstance.destroy();
+
+            singleRadarChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: subjectKeys.map(s => s.name),
+                    datasets: [
+                        {
+                            label: student.name,
+                            data: studentScores,
+                            borderColor: '#0284c7',
+                            backgroundColor: 'rgba(2, 132, 199, 0.2)',
+                        },
+                        {
+                            label: 'Rata-rata Kelas',
+                            data: classAvgScores,
+                            borderColor: '#94a3b8',
+                            backgroundColor: 'rgba(148, 163, 184, 0.15)',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { r: { min: 0, max: 100, ticks: { display: false } } }
+                }
+            });
+
+            const breakdownEl = document.getElementById('single-subject-breakdown');
+            breakdownEl.innerHTML = subjectKeys.map((subj, idx) => {
+                const score = studentScores[idx];
+                return `
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span class="font-medium text-slate-700">${subj.name}</span>
+                            <span class="font-bold text-slate-900">${score.toFixed(1)}</span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                            <div class="bg-brand-600 h-2 rounded-full" style="width: ${Math.min(score, 100)}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function printStudentReport() {
+            window.print();
+        }
+
+        function openUploadModal() {
+            document.getElementById('upload-modal').classList.remove('hidden');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('upload-modal').classList.add('hidden');
+        }
+
+        function openManageTryoutsModal() {
+            renderTryoutManageList();
+            document.getElementById('manage-modal').classList.remove('hidden');
+        }
+
+        function closeManageModal() {
+            document.getElementById('manage-modal').classList.add('hidden');
+        }
+
+        function renderTryoutManageList() {
+            const container = document.getElementById('tryout-list-container');
+            if (tryoutDataSeries.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Belum ada seri tryout diunggah.</p>`;
+                return;
+            }
+
+            container.innerHTML = tryoutDataSeries.map((to, index) => `
+                <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    <div>
+                        <p class="font-bold text-slate-800">${to.title}</p>
+                        <p class="text-[11px] text-slate-500">${to.students.length} Siswa Terdata</p>
+                    </div>
+                    <button onclick="deleteTryoutSeries(${index})" class="p-1.5 text-rose-600 hover:bg-rose-100 rounded transition" title="Hapus Seri Tryout Ini">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `).join('');
+            initLucide();
+        }
+
+        function deleteTryoutSeries(index) {
+            if (confirm('Hapus seri tryout ini dari database?')) {
+                tryoutDataSeries.splice(index, 1);
+                saveStateToStorage();
+                updateTryoutBadge();
+                populateClassFilterOptions();
+                renderBatchTrendChart();
+                updateOverviewStats();
+                applyFilters();
+                renderTryoutManageList();
+            }
+        }
+
+        function handleFileUpload(e) {
+            e.preventDefault();
+            const title = document.getElementById('upload-to-name').value;
+            const fileInput = document.getElementById('upload-to-file');
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+                if (rows.length < 2) {
+                    alert('File Excel tidak valid atau tidak memiliki baris data.');
+                    return;
+                }
+
+                const parsedStudents = parseExcelRows(rows);
+
+                if (parsedStudents.length === 0) {
+                    alert('Gagal mendeteksi data siswa atau subtes. Pastikan format file Excel sesuai.');
+                    return;
+                }
+
+                parsedStudents.sort((a, b) => b.avg - a.avg);
+                parsedStudents.forEach((s, idx) => s.rank = idx + 1);
+
+                const newTryout = {
+                    id: 'to_' + Date.now(),
+                    title: title,
+                    students: parsedStudents
+                };
+
+                tryoutDataSeries.push(newTryout);
+                saveStateToStorage();
+
+                updateTryoutBadge();
+                populateClassFilterOptions();
+                renderBatchTrendChart();
+                updateOverviewStats();
+                applyFilters();
+
+                closeUploadModal();
+                alert(`Berhasil mengunggah "${title}" dengan ${parsedStudents.length} data siswa!`);
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseExcelRows(rows) {
+            let headerRowIndex = -1;
+            let subHeaderRowIndex = -1;
+
+            for (let i = 0; i < Math.min(rows.length, 15); i++) {
+                const rowStr = rows[i].map(c => String(c || '').trim().toUpperCase());
+                if (rowStr.includes('NAMA') || rowStr.includes('NO PESERTA') || rowStr.includes('NO')) {
+                    headerRowIndex = i;
+                    if (i + 1 < rows.length) {
+                        const nextRowStr = rows[i + 1].map(c => String(c || '').trim().toUpperCase());
+                        if (nextRowStr.includes('BNR') || nextRowStr.includes('NIL')) {
+                            subHeaderRowIndex = i + 1;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            if (headerRowIndex === -1) headerRowIndex = 0;
+
+            const headerRow = rows[headerRowIndex].map(h => String(h || '').trim().toUpperCase());
+            const subHeaderRow = subHeaderRowIndex !== -1 ? rows[subHeaderRowIndex].map(h => String(h || '').trim().toUpperCase()) : [];
+
+            let idCol = headerRow.findIndex(h => h.includes('PESERTA') || h.includes('NO.PESERTA') || h.includes('NIS') || h.includes('ID'));
+            let nameCol = headerRow.findIndex(h => h.includes('NAMA'));
+            let classCol = headerRow.findIndex(h => h.includes('KELAS') || h.includes('CLASS'));
+
+            if (nameCol === -1) nameCol = 1;
+
+            const subjectAliases = {
+                'ina': ['INA', 'INDONESIA', 'B.INA', 'BAHASA INDONESIA'],
+                'eng': ['ENG', 'INGGRIS', 'B.ENG', 'BAHASA INGGRIS'],
+                'mat': ['MAT', 'MATEMATIKA', 'MTK'],
+                'matlan': ['MAT LAN', 'MATLAN', 'MATEMATIKA LANJUT', 'MAT LANJUT'],
+                'fis': ['FIS', 'FISIKA'],
+                'bio': ['BIO', 'BIOLOGI'],
+                'kim': ['KIM', 'KIMIA']
+            };
+
+            const colMap = {};
+
+            subjectKeys.forEach(s => {
+                const aliases = subjectAliases[s.key];
+                let foundIndex = -1;
+
+                for (let colIdx = 0; colIdx < headerRow.length; colIdx++) {
+                    const headerVal = headerRow[colIdx];
+                    if (aliases.some(alias => headerVal === alias || headerVal.startsWith(alias))) {
+                        if (subHeaderRowIndex !== -1) {
+                            if (subHeaderRow[colIdx] === 'NIL' || subHeaderRow[colIdx] === 'NILAI') {
+                                foundIndex = colIdx;
+                                break;
+                            } else if (subHeaderRow[colIdx + 1] === 'NIL' && headerRow[colIdx + 1] === '') {
+                                foundIndex = colIdx + 1;
+                                break;
+                            }
+                        } else {
+                            foundIndex = colIdx;
+                            break;
+                        }
+                    }
+                }
+
+                if (foundIndex !== -1) {
+                    colMap[s.key] = foundIndex;
+                }
+            });
+
+            const startDataRow = subHeaderRowIndex !== -1 ? subHeaderRowIndex + 1 : headerRowIndex + 1;
+            const students = [];
+
+            for (let i = startDataRow; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
+
+                const name = row[nameCol];
+                if (!name || String(name).trim() === '' || String(name).toUpperCase() === 'NAMA') continue;
+
+                const kelas = classCol !== -1 && row[classCol] !== undefined && String(row[classCol]).trim() !== '' 
+                    ? String(row[classCol]).trim() 
+                    : '-';
+
+                const scores = {};
+                let totalScore = 0;
+                let count = 0;
+
+                subjectKeys.forEach(s => {
+                    const colIdx = colMap[s.key];
+                    let val = colIdx !== undefined ? parseFloat(row[colIdx]) || 0 : 0;
+
+                    if (val <= 10 && val > 0) {
+                        val = val * 10;
+                    }
+
+                    scores[s.key] = val;
+                    totalScore += val;
+                    count++;
+                });
+
+                const avg = count > 0 ? totalScore / count : 0;
+
+                students.push({
+                    id: idCol !== -1 && row[idCol] ? String(row[idCol]).trim() : String(name).trim().toLowerCase().replace(/\s+/g, '_'),
+                    name: String(name).trim(),
+                    kelas: kelas,
+                    scores: scores,
+                    avg: avg
+                });
+            }
+
+            return students;
+        }
+    </script>
+</body>
+</html>
